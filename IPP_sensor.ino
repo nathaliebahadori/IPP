@@ -5,8 +5,8 @@
 Adafruit_ADP9960 apds;
 SoftwareSerial bluetooth (2, 3); //RX TX
 
-int sensorPin =A0; //LDR till en analog pin 
 int ledPin = 13; //PWM LED pin
+int sensorValue = 0; 
 
 int lagra_ljusvarde = 0; // lagrar ljusvärde
 int troskel= 500; // tröskelvärde för att tända lampa
@@ -17,6 +17,8 @@ bool autoMode = true; //automatisk ljusstyrka
 
 unsigned long timer = 0; //tid för timer
 unsigned long langdTimer = 0; //timer för att tända/släcka lampan
+
+
 
 void setup() 
 {
@@ -36,8 +38,13 @@ void setup()
 void loop() 
 {
   //Läs ljusvärde
-  sensorValue = analogRead(sensorPin);
-  ljusstyrka = map(sensorValue, 0, 1023, 0, 255);
+  //ljusstyrka = map(sensorValue, 0, 1023, 0, 255);
+  uint16_t sensorValue = 0;
+  if (apds.readAmbientLight(sensorValue)) 
+  {
+    ljusstyrka = map(sensorValue, 0, 65535, 0, 255); // skala om värdet till 0-255
+    lagra_ljusvarde = sensorValue;
+  }
 
   //hantera automatiosk ljusstyrning (om autoMode är aktiverat)
   if(autoMode)
@@ -53,7 +60,7 @@ void loop()
   }
 
   //timer-funktion (tänd/släck vid förutbestämd tid)
-  if(millisek() - timer >= langdTimer)
+  if(millis() - timer >= langdTimer)
   {
     digitalWrite(ledPin, LOW); //släcker lampa när tiden är ute
   }
@@ -66,13 +73,13 @@ void loop()
     {
       case 'A':
       {
-        autoMode = !autoMode; //väla mellan auto och manuellt läge
+        autoMode = !autoMode; //välja mellan auto och manuellt läge
         break;
       }
       case 'T':
       {
         langdTimer =60000; //exempel på en tier på 1 minut
-        timer = millisek(); //starta timer
+        timer = millis(); //starta timer
         break;
       }
       case 'S':
