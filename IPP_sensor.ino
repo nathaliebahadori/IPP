@@ -3,17 +3,15 @@
 #include <softwareSerial.h>
 
 Adafruit_ADP9960 apds;
-SoftwareSerial bluetooth (2, 3); //RX, TX
+SoftwareSerial bluetooth (2, 3); //RX TX
 
 int sensorPin =A0; //LDR till en analog pin 
-int ledPin = 9; //PWM LED pin
+int ledPin = 13; //PWM LED pin
+
 int lagra_ljusvarde = 0; // lagrar ljusvärde
 int troskel= 500; // tröskelvärde för att tända lampa
 int ljusstyrka = 0; //LED ljusstyrka
 int fargtemperatur = 100; //Färgtemperatur (0-255)
-int rodPIN = 10; //röd kanal för RGB LED
-int gronPIN = 11; //grön kanal för RGB LED
-int blaPIN = 12; //blå kanal för RGB LED
 
 bool autoMode = true; //automatisk ljusstyrka
 
@@ -23,9 +21,7 @@ unsigned long langdTimer = 0; //timer för att tända/släcka lampan
 void setup() 
 {
   pinMode (ledPin, OUTPUT);
-  pinMode (rodPin, OUTPUT);
-  pinMode (gronPin, OUTPUT);
-  pinMode (blaPin, OUTPUT);
+
   Serial.begin(9600); //USB serial för debugging
   bluetooth.begin(9600); //Bluetooth-kommunikation
 
@@ -35,6 +31,7 @@ void setup()
     while (1);
   }
   Serial.println("Ljussensor initierad");
+}
 
 void loop() 
 {
@@ -47,24 +44,18 @@ void loop()
   {
     if(sensorValue < troskel)
     {
-      analogWrite(rodPin, ljusstyrka); //tänd lampan med justerad ljusstyrka
-      analogWrite(gronPin, ljusstyrka); // grön kanal
-      analogWrite(blaPin, ljusstyrka); //blå kanal
+      digitalWrite(ledPin, HIGH); //tänder inbyggda led:en
     }
     else
     {
-      analogWrite(rodPin, 0); //släck lampan
-      analogWrite(gronPin, 0); //släck lampan
-      analogWrite(blaPin, 0); //släck lampan
+      digitalWrite(ledPin, LOW); //släcker inbyggda led:en
     }
   }
 
   //timer-funktion (tänd/släck vid förutbestämd tid)
   if(millisek() - timer >= langdTimer)
   {
-    analogWrite(redPin, 0);
-    analogWrite(gronPin, 0);
-    analogWrite(blaPin, 0);
+    digitalWrite(ledPin, LOW); //släcker lampa när tiden är ute
   }
 
   //Bluetooth-kommunikation för att styra lampa
@@ -76,16 +67,6 @@ void loop()
       case 'A':
       {
         autoMode = !autoMode; //väla mellan auto och manuellt läge
-        break;
-      }
-      case 'B':
-      {
-        fargtemperatur = constrain(fargtemperatur + 10, 0, 255); //öka färgtemperatur
-        break;
-      }
-      case 'C':
-      {
-        fargtemperatur = constrain(fargtemperatur - 10, 0, 255); //minska färgtemperatur
         break;
       }
       case 'T':
@@ -109,11 +90,9 @@ void loop()
 
   // Skicka status till appen
   Serial.print("Ljus: ");
-  Serial.print(lightValue);
+  Serial.print(lagra_ljusvarde);
   Serial.print(", ljusstyrka: ");
-  Serial.print(brightness);
-  Serial.print(", temp: ");
-  Serial.pointln(colorBalance);
+  Serial.print(ljusstyrka);
 
   delay(200);
 }
