@@ -5,21 +5,15 @@
 Adafruit_APDS9960 apds;
 SoftwareSerial bluetooth (2, 3); //RX TX
 
-int ledPin = 13; //PWM LED pin
-int sensorValue = 0; 
-
-int lagra_ljusvarde = 0; // lagrar ljusvärde
-int troskel= 500; // tröskelvärde för att tända lampa
+const int ledPin = 13; //PWM LED pin
 int ljusstyrka = 0; //LED ljusstyrka
-int fargtemperatur = 100; //Färgtemperatur (0-255)
+int lagra_ljusvarde = 0;
 
 bool autoMode = true; //automatisk ljusstyrka
 bool manualOverride= false; //ny flagga för manuell ljusstyrka
 
 unsigned long timer = 0; //tid för timer
 unsigned long langdTimer = 0; //timer för att tända/släcka lampan
-
-
 
 void setup() 
 {
@@ -43,7 +37,6 @@ void loop()
   //ljusstyrka = map(sensorValue, 0, 1023, 0, 255);
   uint16_t r, g, b, c;
   apds.getColorData(&r, &g, &b, &c); 
-  lagra_ljusvarde = c;
 
   Serial.print("Ljus: ");
   Serial.println(lagra_ljusvarde);
@@ -52,14 +45,24 @@ void loop()
   //hantera automatiosk ljusstyrning (om autoMode är aktiverat)
   if(autoMode && !manualOverride) //Endast om autoMode är på och ongen manuell ändrig gjorts
   {
-    ljusstyrka = map(c, 0, 65535, 0, 255);
-    analogWrite(ledPin, ljusstyrka); //Justera ljusstyrka
+    //Tänd LED om c över tröskel (tex 300)
+    if (c < 300)
+    {
+      digitalWrite(ledPin, HIGH);
+      ljusstyrka = 1;
+    }
+    else
+    {
+      digitalWrite(ledPin, LOW);
+      ljusstyrka = 0;
+    }
   }
 
   //timer-funktion (tänd/släck vid förutbestämd tid)
-  if(millis() - timer >= langdTimer && langdTimer > 0)
+  if(langdTimer > 0 && millis() - timer >= langdTimer)
   {
-    analogWrite(ledPin, 0); //släcker lampa när tiden är ute
+    digitalWrite(ledPin, LOW); //släcker lampa när tiden är ute
+    ljusstyrka = 0;
     langdTimer = 0; //återställ timer
   }
 
@@ -87,20 +90,18 @@ void loop()
       }
       case 'S':
       {
-        ljusstyrka = constrain(ljusstyrka + 10, 0, 255); //öka ljusstyrka
-        manualOverride = true; //sätt flagga vid manuell ändring
-        Serial.println("Ljustyrkan ökad till: ");//kom ihåg att ändra till bluetooth istället för serial vid tillgång till app
-        Serial.println(ljusstyrka);//kom ihåg att ändra till bluetooth istället för serial vid tillgång till app
-        analogWrite(ledPin, ljusstyrka);
+        digitalWrite(ledPin, HIGH);
+        ljusstyrka = 1;
+        manualOverride = true;
+        Serial.println("LED på");
         break;
       }
       case 'D':
       {
-        ljusstyrka = constrain(ljusstyrka - 10, 0, 255); //minska ljusstyrka
-        manualOverride = true; //sätt flagga vid manuell ändring
-        Serial.println("Ljustyrkan minskad till: ");//kom ihåg att ändra till bluetooth istället för serial vid tillgång till app
-        Serial.println(ljusstyrka);//kom ihåg att ändra till bluetooth istället för serial vid tillgång till app
-        analogWrite(ledPin, ljusstyrka);
+        digitalWrite(ledPin, LOW);
+        ljusstyrka = 0;
+        manualOverride = true;
+        Serial.println("LED av");
         break;
       }
       default:
@@ -112,9 +113,7 @@ void loop()
   }
 
   // Skicka status till appen
-  Serial.print(" Ljus: ");
-  Serial.print(lagra_ljusvarde);
-  Serial.print(", ljusstyrka: ");
+  Serial.print("Ljusstyrka: ");
   Serial.print(ljusstyrka);
 
   delay(1000);
