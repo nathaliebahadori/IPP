@@ -7,10 +7,10 @@ SoftwareSerial bluetooth (2, 3); //RX TX
 
 const int ledPin = 13; //PWM LED pin
 int ljusstyrka = 0; //LED ljusstyrka
-int lagra_ljusvarde = 0;
 
 bool autoMode = true; //automatisk ljusstyrka
-bool manualOverride= false; //ny flagga för manuell ljusstyrka
+bool manualOverride= false; //manuell ljusstyrka
+bool timerActive = false; //timerstatus
 
 unsigned long timer = 0; //tid för timer
 unsigned long langdTimer = 0; //timer för att tända/släcka lampan
@@ -37,9 +37,6 @@ void loop()
   //ljusstyrka = map(sensorValue, 0, 1023, 0, 255);
   uint16_t r, g, b, c;
   apds.getColorData(&r, &g, &b, &c); 
-
-  Serial.print("Ljus: ");
-  Serial.println(lagra_ljusvarde);
   
 
   //hantera automatiosk ljusstyrning (om autoMode är aktiverat)
@@ -59,11 +56,14 @@ void loop()
   }
 
   //timer-funktion (tänd/släck vid förutbestämd tid)
-  if(langdTimer > 0 && millis() - timer >= langdTimer)
+  if(timerActive && (millis() - timer >= langdTimer))
   {
     digitalWrite(ledPin, LOW); //släcker lampa när tiden är ute
     ljusstyrka = 0;
+    timerActive = false;
     langdTimer = 0; //återställ timer
+    timer = 0;
+    Serial.println("Timer avslutad");
   }
 
   //Bluetooth-kommunikation för att styra lampa
@@ -83,8 +83,9 @@ void loop()
       }
       case 'T':
       {
-        langdTimer =60000; //exempel på en tier på 1 minut
+        langdTimer = 60000; //exempel på en tier på 1 minut
         timer = millis(); //starta timer
+        timerActive = true;
         Serial.println("Timer på 1 minut aktiverad");//kom ihåg att ändra till bluetooth istället för serial vid tillgång till app
         break;
       }
@@ -114,7 +115,7 @@ void loop()
 
   // Skicka status till appen
   Serial.print("Ljusstyrka: ");
-  Serial.print(ljusstyrka);
+  Serial.println(ljusstyrka);
 
   delay(1000);
 }
